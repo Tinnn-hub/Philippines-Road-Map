@@ -1,0 +1,228 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Philippines Road Map</title>
+
+<link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#004aad">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+body{
+margin:0;
+font-family:Arial;
+background:#f4f6fa;
+}
+
+h2{
+text-align:center;
+background:#004aad;
+color:white;
+padding:12px;
+margin:0;
+}
+
+#map{
+height:70vh;
+}
+
+.toolbar{
+display:flex;
+justify-content:center;
+background:white;
+padding:10px;
+gap:10px;
+flex-wrap:wrap;
+}
+
+button{
+border:none;
+padding:10px 14px;
+border-radius:6px;
+color:white;
+font-weight:bold;
+cursor:pointer;
+}
+
+.b-add{background:#2e7d32;}
+.b-load{background:#1976d2;}
+.b-clear{background:#c62828;}
+.b-del{background:#f57c00;}
+
+.wrap{
+padding:20px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:6px;
+text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<h2>PHILIPPINES ROAD MAP</h2>
+
+<div class="toolbar">
+<button class="b-add" onclick="addMarkerMode()">Add Marker</button>
+<button class="b-load" onclick="loadMarkers()">Load Markers</button>
+<button class="b-clear" onclick="clearMarkers()">Clear All</button>
+</div>
+
+<div id="map"></div>
+
+<div class="wrap">
+<h3>Marker History</h3>
+<table>
+<thead>
+<tr><th>Time</th><th>Name</th><th>Action</th></tr>
+</thead>
+<tbody id="tb"></tbody>
+</table>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+if("serviceWorker" in navigator){
+navigator.serviceWorker.register("service-worker.js");
+}
+
+let map = L.map('map').setView([12.8797,121.7740],6);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+attribution:'© OpenStreetMap'
+}).addTo(map);
+
+let cities = {
+"Manila":[14.5995,120.9842],
+"Cebu City":[10.3157,123.8854],
+"Davao City":[7.1907,125.4553]
+};
+
+Object.keys(cities).forEach(c=>{
+L.marker(cities[c]).addTo(map).bindPopup(c);
+});
+
+let addMode=false;
+
+function addMarkerMode(){
+alert("Tap the map to place marker");
+addMode=true;
+}
+
+map.on("click",function(e){
+
+if(!addMode) return;
+
+let lat=e.latlng.lat;
+let lng=e.latlng.lng;
+
+let name=prompt("Enter marker name");
+
+if(!name) return;
+
+L.marker([lat,lng]).addTo(map).bindPopup(name);
+
+saveMarker(name,lat,lng);
+
+addMode=false;
+
+});
+
+function saveMarker(name,lat,lng){
+
+let data=JSON.parse(localStorage.getItem("ph_markers")||"[]");
+
+data.push({
+id:Date.now(),
+t:new Date().toLocaleTimeString(),
+n:name,
+lat:lat,
+lng:lng
+});
+
+localStorage.setItem("ph_markers",JSON.stringify(data));
+
+showMarkers();
+
+}
+
+function showMarkers(){
+
+let data=JSON.parse(localStorage.getItem("ph_markers")||"[]");
+
+let tb=document.getElementById("tb");
+
+tb.innerHTML="";
+
+data.forEach(m=>{
+
+tb.innerHTML+=`
+<tr>
+<td>${m.t}</td>
+<td>${m.n}</td>
+<td>
+<button class="b-del" onclick="deleteMarker(${m.id})">Delete</button>
+</td>
+</tr>
+`;
+
+});
+
+}
+
+function deleteMarker(id){
+
+let data=JSON.parse(localStorage.getItem("ph_markers")||"[]");
+
+data=data.filter(x=>x.id!==id);
+
+localStorage.setItem("ph_markers",JSON.stringify(data));
+
+showMarkers();
+
+}
+
+function loadMarkers(){
+
+let data=JSON.parse(localStorage.getItem("ph_markers")||"[]");
+
+data.forEach(m=>{
+L.marker([m.lat,m.lng]).addTo(map).bindPopup(m.n);
+});
+
+}
+
+function clearMarkers(){
+
+if(confirm("Delete all markers?")){
+
+localStorage.removeItem("ph_markers");
+
+location.reload();
+
+}
+
+}
+
+showMarkers();
+
+</script>
+
+</body>
+</html>
